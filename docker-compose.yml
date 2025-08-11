@@ -1,0 +1,41 @@
+x-volumes: &volumes
+  - ./README.md:/README.md
+  - ./documentation:/documentation
+  - ./source/jpegdata:/source/jpegdata
+  - ./source/jpegdata:/usr/local/lib/python/site-packages/jpegdata
+  - ./tests:/tests
+
+services:
+
+  black:
+    container_name: jpegdata-black
+    build:
+      dockerfile: ./Dockerfile
+      context: ./
+    # image: jpegdata-black
+    environment:
+      - SERVICE=black
+    volumes:
+      *volumes
+
+  flakes:
+    container_name: jpegdata-flakes
+    build:
+      dockerfile: ./Dockerfile
+      context: ./
+    # image: jpegdata-flakes
+    environment:
+      - SERVICE=flakes
+    volumes:
+      *volumes
+
+  tests:
+    container_name: jpegdata-tests
+    build:
+      dockerfile: ./Dockerfile
+      context: ./
+    # image: jpegdata-tests
+    environment:
+      - SERVICE=tests
+    volumes:
+      *volumes
