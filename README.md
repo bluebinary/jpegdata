@@ -101,6 +101,67 @@ for segment in jpeg:
     print(segment)
 ```
 
+### Command Line Tool
+
+The `jpegdata` command line tool, installed alongside the library, provides a command
+line interface to print out the information parsed from the specified JPEG file.
+
+The tool can print out the information directly to the command line either as plain text
+or as a JSON-serialised payload.
+
+To print the help information for the tool, pass the `--help` argument.
+
+```shell
+$ jpegdata ./path/to/file.jpeg
+```
+
+The above command will generate output similar to the following:
+
+```plain
+JPEGData Version:    0.1.1
+File Name:           ./path/to/file.jpeg
+File Path:           /absolute/path/to/file.jpeg
+File Size:           3890 bytes
+File Created Date:   2025-08-10 17:15:13.892694
+File Modified Date:  2025-08-10 17:15:07.312874
+Byte Order:          MSB
+Format:              JPEG Extensible Image File (EXIF) format
+Encoding:            Baseline DCT
+Precision:           8
+Width:               3 pixels
+Height:              3 pixels
+```
+
+To emit the parsed information as a JSON-serialised payload, pass the `--format json`
+argument to the command:
+
+```shell
+$ jpegdata ./path/to/file.jpeg --format json
+```
+
+The above command will generate output similar to the following:
+
+```json
+{
+  "filename": "./path/to/file.jpeg",
+  "filepath": "/absolute/path/to/file.jpeg",
+  "filesize": 3890,
+  "filedate": {
+    "created": "2025-08-10 17:15:13.892694",
+    "modified": "2025-08-10 17:15:07.312874"
+  },
+  "byte_oder": "MSB",
+  "encoding": "BaselineDCT",
+  "precision": 8,
+  "width": 3,
+  "height": 3
+}
+```
+
+To emit the verbose form of output, pass the `--verbose` argument, which will include
+information about the parsed segment markers found in the file. This is included in both
+the plain text and JSON-serialised output formats.
+
 ### Disclaimer
 
 While every effort has been made to ensure that the library works reliably with JPEG

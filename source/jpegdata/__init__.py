@@ -20,10 +20,13 @@ from jpegdata.structures import (
 from deliciousbytes import ByteOrder, UInt8, UInt16
 from deliciousbytes.utilities import hexbytes
 
+from functools import cache
+
 from tabulicious import tabulate
 
 import os
 import io
+import datetime
 
 
 __all__ = [
@@ -40,6 +43,15 @@ __all__ = [
     "Segment",
     "Offset",
 ]
+
+
+@cache
+def _get_version() -> str:
+    with open(os.path.join(os.path.dirname(__file__), "version.txt"), "r") as file:
+        return file.read().strip()
+
+
+__version__ = _get_version()
 
 
 class JPEG(object):
@@ -409,7 +421,7 @@ class JPEG(object):
                     marker=marker,
                     offset=Offset(source=offset),
                     length=length,
-                    # data=data,
+                    data=data,
                 )
             )
 
@@ -437,6 +449,14 @@ class JPEG(object):
         """Returns the JPEG image's file size in bytes."""
 
         return self.info.filesize
+
+    @property
+    def datetime_created(self) -> datetime:
+        return datetime.datetime.fromtimestamp(os.path.getctime(self.filepath))
+
+    @property
+    def datetime_modified(self) -> datetime:
+        return datetime.datetime.fromtimestamp(os.path.getmtime(self.filepath))
 
     @property
     def order(self) -> ByteOrder:
@@ -501,7 +521,7 @@ class JPEG(object):
                     segment.length,
                     segment.offset.source,
                     segment.offset.target,
-                    None,
+                    hexbytes(segment.data, limit=10) if segment.data else "–",
                 ]
             )
 
