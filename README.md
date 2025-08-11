@@ -118,7 +118,6 @@ $ jpegdata ./path/to/file.jpeg
 The above command will generate output similar to the following:
 
 ```plain
-JPEGData Version:    0.1.1
 File Name:           ./path/to/file.jpeg
 File Path:           /absolute/path/to/file.jpeg
 File Size:           3890 bytes
