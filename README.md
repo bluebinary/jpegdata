@@ -126,9 +126,13 @@ File Modified Date:  2025-08-10 17:15:07.312874
 Byte Order:          MSB
 Format:              JPEG Extensible Image File (EXIF) format
 Encoding:            Baseline DCT
-Precision:           8
-Width:               3 pixels
-Height:              3 pixels
+Image Width:         3 pixels
+Image Height:        3 pixels
+Image Size:          3x3 pixels
+Megapixels:          0.000009
+Bits Per Sample:     8
+Colour Components:   3
+Colour Transform:    YCbCr
 ```
 
 To emit the parsed information as a JSON-serialised payload, pass the `--format json`
@@ -154,6 +158,10 @@ The above command will generate output similar to the following:
   "precision": 8,
   "width": 3,
   "height": 3
+  "colour": {
+    "components": 3,
+    "transform": "YCbCr"
+  }
 }
 ```
 
