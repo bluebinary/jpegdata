@@ -1,5 +1,10 @@
 # JPEGData Library Change Log
 
+## [0.1.2] - 2025-09-08
+### Added
+- Added support for colour transform detection.
+- Added support for colour components detection.
+
 ## [0.1.1] - 2025-08-10
 ### Added
 - Added (this) change log file to the project.

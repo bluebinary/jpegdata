@@ -33,16 +33,16 @@ def parser():
     filename: str = args.filename
     filepath: str = os.path.abspath(filename)
 
-    if not os.path.exists(filepath):
-        raise JPEGDataFileError(
-            f"The specified file path, '{filename}', does not exist!"
-        )
-    elif not os.path.isfile(filepath):
-        raise JPEGDataFileError(
-            f"The specified file path, '{filename}', is not a file!"
-        )
-
     try:
+        if not os.path.exists(filepath):
+            raise JPEGDataFileError(
+                f"The specified file path, '{filename}', does not exist!"
+            )
+        elif not os.path.isfile(filepath):
+            raise JPEGDataFileError(
+                f"The specified file path, '{filename}', is not a file!"
+            )
+
         jpeg = JPEG(filepath=filepath)
 
         if args.format == "json":
@@ -56,9 +56,13 @@ def parser():
                 },
                 "byte_oder": jpeg.order.name if jpeg.order else None,
                 "encoding": jpeg.encoding.name if jpeg.encoding else None,
-                "precision": jpeg.precision,
                 "width": jpeg.width,
                 "height": jpeg.height,
+                "precision": jpeg.precision,
+                "colour": {
+                    "components": jpeg.components if jpeg.components else None,
+                    "transform": jpeg.transform.name if jpeg.transform else None,
+                },
             }
 
             if args.verbose is True:
@@ -80,6 +84,7 @@ def parser():
         else:
             if args.version is True:
                 print("JPEGData Version:    %s" % (jpegdata_version))
+
             print("File Name:           %s" % (filename))
             print("File Path:           %s" % (jpeg.filepath))
             print("File Size:           %d bytes" % (jpeg.filesize))
@@ -94,9 +99,22 @@ def parser():
                 "Encoding:            %s"
                 % (jpeg.encoding.description if jpeg.encoding else "?")
             )
-            print("Precision:           %d" % (jpeg.precision))
-            print("Width:               %d pixels" % (jpeg.width))
-            print("Height:              %d pixels" % (jpeg.height))
+            print("Image Width:         %d pixels" % (jpeg.width))
+            print("Image Height:        %d pixels" % (jpeg.height))
+            print("Image Size:          %dx%d pixels" % (jpeg.height, jpeg.height))
+            print(
+                "Megapixels:          %3.3f"
+                % ((int(jpeg.width) * int(jpeg.height)) / 1000000)
+            )
+            print("Bits Per Sample:     %d" % (jpeg.precision))
+            print(
+                "Colour Components:   %d"
+                % (jpeg.components if jpeg.components else "?")
+            )
+            print(
+                "Colour Transform:    %s"
+                % (jpeg.transform.name if jpeg.transform else "?")
+            )
 
             if args.verbose is True:
                 jpeg.dump()

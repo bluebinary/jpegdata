@@ -6,15 +6,25 @@ class Format(Enumeration):
 
     JPEG = anno(
         1,
-        description="JPEG Interchange File (JIF) format",
+        description="JPEG Interchange File (JIF)",
     )
 
     JFIF = anno(
         2,
-        description="JPEG File Interchange (JFIF) format",
+        description="JPEG File Interchange (JFIF)",
     )
 
     EXIF = anno(
         3,
-        description="JPEG Extensible Image File (EXIF) format",
+        description="JPEG Extensible Image File (EXIF)",
+    )
+
+    CCIF = anno(
+        4,
+        description="Canon Camera Image File Format (CCIF)",
+    )
+
+    SPIFF = anno(
+        5,
+        description="Still Picture Interchange File Format (SPIFF)",
     )

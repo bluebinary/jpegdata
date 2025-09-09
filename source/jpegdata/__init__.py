@@ -6,6 +6,7 @@ from jpegdata.exceptions import (
     JPEGDataParseError,
 )
 from jpegdata.enumerations import (
+    ColourTransform,
     Format,
     Encoding,
     Marker,
@@ -63,11 +64,13 @@ class JPEG(object):
     _order: ByteOrder = ByteOrder.MSB  # All JPEG files are encoded using big-endian
     _format: Format = None
     _encoding: Encoding = None
+    _segments: list[Segment] = None
+    _index: int = 0
     _precision: int = None
     _width: int = None
     _height: int = None
-    _segments: list[Segment] = None
-    _index: int = 0
+    _transform: ColourTransform = None
+    _components: int = None
 
     def __new__(cls, filepath: str, **kwargs) -> JPEG:
         """Handle creating new instances of the JPEG class, which based on the format of
@@ -109,6 +112,10 @@ class JPEG(object):
                     jpegclass = JFIF
                 elif info.format is Format.EXIF:
                     jpegclass = EXIF
+                elif info.format is Format.CCIF:
+                    jpegclass = CCIF
+                elif info.format is Format.SPIFF:
+                    jpegclass = SPIFF
                 else:
                     raise JPEGDataParseError(
                         f"The specified file, '{filepath}', is not a valid JPEG file!"
@@ -226,6 +233,16 @@ class JPEG(object):
                     # The next two bytes of EXIF JPEG format files must be 0xFF 0xE1
                     elif header[2:4] == bytes([0xFF, 0xE1]):  # EXIF JPEG
                         info.format = Format.EXIF
+
+                    # The next two bytes of Canon Camera Image File Format JPEG files
+                    # must be 0xFF 0xE2
+                    elif header[2:4] == bytes([0xFF, 0xE2]):  # CCIF JPEG
+                        info.format = Format.CCIF
+
+                    # The next two bytes of Still Picture Interchange File Format JPEG
+                    # files must be 0xFF 0xE8
+                    elif header[2:4] == bytes([0xFF, 0xE8]):  # SPIFF JPEG
+                        info.format = Format.SPIFF
 
                     # The next two bytes of Adobe APP14 format files must be 0xFF 0xEE
                     elif header[2:4] == bytes([0xFF, 0xEE]):
@@ -354,6 +371,8 @@ class JPEG(object):
         precision: int = None
         width: int = None
         height: int = None
+        transform: ColourTransform = ColourTransform.Unknown
+        components: list[bytes] = []
 
         # Start the offset at 2, skipping the SOI marker (0xFF 0xD8) as it has been verified
         offset: int = 0
@@ -374,10 +393,10 @@ class JPEG(object):
                 marker.label,
             )
 
-            if marker is Marker.EOI:  # 0xD9 EOI (End of Image) marker
+            if marker is Marker.EOI:  # [0xFF 0xD9] EOI (End of Image) marker
                 # The End of Image marker indicates there are no more markers to parse
                 break
-            elif marker is Marker.SOI:  # 0xD8 (Start of Image) marker
+            elif marker is Marker.SOI:  # [0xFF 0xD8] (Start of Image) marker
                 # The Start of Image marker has no data, so we need to skip data parsing
                 pass
             else:
@@ -401,11 +420,11 @@ class JPEG(object):
 
                 # logger.debug(" > data => %r" % (data))
 
-                # Image precision, width and height are stored at the beginning of the
-                # Baseline DCT and Progressive DCT markers:
+                # Determine image precision (bits per sample), width and height; these
+                # are held at the beginning of the Baseline and Progressive DCT markers:
                 if marker in [
-                    Marker.SOF0,  # Baseline DCT
-                    Marker.SOF2,  # Progressive DCT
+                    Marker.SOF0,  # [0xFF 0xC0] Baseline DCT
+                    Marker.SOF2,  # [0xFF 0xC2] Progressive DCT
                 ]:
                     if marker is Marker.SOF0:
                         encoding = Encoding.BaselineDCT
@@ -415,6 +434,55 @@ class JPEG(object):
                     precision = UInt8.decode(data[0:1], order=ByteOrder.MSB)
                     height = UInt16.decode(data[1:3], order=ByteOrder.MSB)
                     width = UInt16.decode(data[3:5], order=ByteOrder.MSB)
+                elif marker is Marker.APP0:
+                    if data.startswith(b"JFIF"):
+                        transform = ColourTransform.YCbCr
+
+                # Determine colour transform, which can be encoded in several different
+                # ways; for JPEGs with an Adobe APP14 marker, the colour transform is
+                # held in the twelfth byte [11] from the start of the marker
+                if marker is Marker.APP14:
+                    if data.startswith(b"Adobe") and len(data) >= 12:
+                        if byte := data[11]:
+                            if byte == 0:
+                                transform = ColourTransform.RGB
+                            elif byte == 1:
+                                transform = ColourTransform.YCbCr
+                            elif byte == 2:
+                                transform = ColourTransform.YCCK
+                            else:
+                                logger.warning(
+                                    f"Unknown colour transformation byte: {byte}"
+                                )
+                                transform = ColourTransform.Unknown
+
+                # Alternatively, for JPEGs without an Adobe APP14 marker, the number and
+                # content of the components held in either the SOF0 or SOF2 markers can
+                # be used to determine the colour transform; there are cases however
+                # where if suitable information is not present in the file, that it may
+                # not be possible to determine the colour transform with accuracy:
+                if marker in [
+                    Marker.SOF0,
+                    Marker.SOF2,
+                ]:
+                    if len(data) >= 5:
+                        components = [data[6 + (3 * index)] for index in range(data[5])]
+
+                    if (count := len(components)) == 1:
+                        transform = ColourTransform.Grayscale
+                    elif count == 3:
+                        if components == [1, 2, 3]:
+                            # Inferred from component IDs
+                            transform = ColourTransform.YCbCr
+                        elif components == [ord("R"), ord("G"), ord("B")]:
+                            transform = ColourTransform.RGB
+                    elif count == 4:
+                        if components == [ord("C"), ord("M"), ord("Y"), ord("K")]:
+                            transform = ColourTransform.CMYK
+                        else:
+                            logger.warning(
+                                "Ambiguous color transform: CMYK or YCCK (no APP14)"
+                            )
 
             self._segments.append(
                 Segment(
@@ -431,6 +499,8 @@ class JPEG(object):
         self._precision = precision
         self._width = width
         self._height = height
+        self._transform = transform
+        self._components = len(components)
 
     @property
     def info(self) -> Information:
@@ -495,6 +565,18 @@ class JPEG(object):
         return self._height
 
     @property
+    def transform(self) -> ColourTransform:
+        """Returns the JPEG image's colour transform."""
+
+        return self._transform
+
+    @property
+    def components(self) -> int:
+        """Returns the JPEG image's number of colour components."""
+
+        return self._components
+
+    @property
     def segments(self) -> list[Segment]:
         return self._segments
 
@@ -520,7 +602,7 @@ class JPEG(object):
                     segment,
                     segment.length,
                     segment.offset.source,
-                    segment.offset.target,
+                    segment.offset.target if segment.offset.target > 0 else "–",
                     hexbytes(segment.data, limit=10) if segment.data else "–",
                 ]
             )
@@ -537,5 +619,17 @@ class JFIF(JPEG):
 
 class EXIF(JPEG):
     """The EXIF class represents EXIF format JPEG files and their raw data."""
+
+    pass
+
+
+class CCIF(JPEG):
+    """The CCIF class represents CCIF format JPEG files and their raw data."""
+
+    pass
+
+
+class SPIFF(JPEG):
+    """The SPIFF class represents SPIFF format JPEG files and their raw data."""
 
     pass
