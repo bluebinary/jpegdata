@@ -7,6 +7,7 @@ from jpegdata import (
     Encoding,
     Segment,
     Marker,
+    ColourTransform,
 )
 
 import os
@@ -30,6 +31,8 @@ def test_jpegdata_initialisation_exif_format_jpeg(path: callable):
     assert jpeg.precision == 8
     assert jpeg.width == 3
     assert jpeg.height == 3
+    assert jpeg.components == 3
+    assert jpeg.transform is ColourTransform.YCbCr
 
     assert len(jpeg) == 11
 
@@ -56,6 +59,8 @@ def test_jpegdata_initialisation_jfif_format_jpeg(path: callable):
     assert jpeg.precision == 8
     assert jpeg.width == 3
     assert jpeg.height == 3
+    assert jpeg.components == 3
+    assert jpeg.transform is ColourTransform.YCbCr
 
     assert len(jpeg) == 14
 

@@ -21,14 +21,14 @@ system using `pip install` by entering the following command:
 
 The JPEGData library's main class is the `JPEG` class through which JPEG image files can
 be loaded, modified via the supported actions, and saved. The library supports reading
-several common JPEG file formats including JFIF and EXIF formatted JPEG files. Currently
-the library does not support more recent JPEG formats and derivations such as JPEG XL,
-JPEG-2000, JPEG XR, etc.
+several common JPEG file formats including JFIF, EXIF, CCIF and SPIFF formatted JPEG files.
+Currently the library does not support more recent JPEG formats and derivations such as
+JPEG XL, JPEG-2000, JPEG XR, etc.
 
 The `JPEG` class offers the following methods:
 
 * `JPEG(filepath: str)` – The `JPEG()` class constructor expects an absolute filepath at
-a minimum for the JPEG file you wish to open. Upon initializing the class with the file,
+a minimum for the JPEG file you wish to open. Upon initialising the class with the file,
 the library will then attempt to load and parse the file. Assuming that the file is a 
 valid JPEG file, the library will parse the file, identify any segments contained within
 the file, and any data associated with each of the segments, and will determine several
@@ -50,17 +50,27 @@ The `JPEG` class offers the following properties:
  * `filesize` (`int`) – The `filesize` property can be used to get the original file size
  of the file that was specified at the time the class was initialised.
 
+ * `datetime_created` (`datetime`) – The `datetime_created` property can be used to access
+ the date/time that the loaded JPEG file was created according to filesystem metadata.
+
+ * `datetime_modified` (`datetime`) – The `datetime_modified` property can be used to access
+ the date/time that the loaded JPEG file was modified according to filesystem metadata.
+
  * `order` (`ByteOrder`) – The `order` property can be used to determine the byte order
- of the JPEG file. The property will report either `ByteOrder.MSB` for big endian files
- or `ByteOrder.LSB` for little endian files.
+ of the JPEG file. As all JPEG files are encoded as big-endian, the property will always
+ report `ByteOrder.BigEndian`.
 
  * `format` (`Format`) – The `format` property can be used to determine the file format
- of the JPEG file. The property will report either `Format.JPEG` for baseline formatted
- JPEG files, `Format.JFIF` for JFIF formatted files and `Format.EXIF` for EXIF formatted
- JPEG files.
+ of the JPEG file. The property will report one of the following `Format` enumeration values:
+
+   * `Format.JPEG` for baseline formatted JPEG files;
+   * `Format.JFIF` for JPEG File Interchange Format (JFIF) formatted JPEG files;
+   * `Format.EXIF` for Extensible Image Format (EXIF) formatted JPEG files;
+   * `Format.CCIF` for Canon Camera Image File Format (CCIF) formatted JPEG files;
+   * `Format.SPIFF` for Still Picture Interchange File Format (SPIFF) formatted JPEG files.
 
  * `encoding` (`Encoding`) – The `encoding` property can be used to determine the encoding
- used for the JPEG file, which will report a `Encoding` enumeration value which includes:
+ used for the JPEG file, which will report one of the following `Encoding` enumeration values:
 
    * `Encoding.BaselineDCT` for baseline DCT encoded images;
    * `Encoding.ProgressiveDCT` for progressive DCT encoded images.
@@ -69,25 +79,42 @@ The `JPEG` class offers the following properties:
 
  * `height` (`int`) – The `height` property can be used to access the parsed pixel height of the image.
  
-* `precision` (`int`) – The `precision` property can be used to access the parsed precision of the image.
+ * `precision` (`int`) – The `precision` property can be used to access the parsed precision of the image.
+
+ * `transform` (`ColourTransform`) – The `transform` property can be used to determine the
+ colour transform used for the JPEG file, which will report one of the following `ColourTransform` enumeration
+ values:
+
+   * `ColourTransform.Unknown` used when the colour transform cannot be determined.
+   * `ColourTransform.RGB` for RGB images.
+   * `ColourTransform.YCbCr` for YCbCr images.
+   * `ColourTransform.YCCK` for YCCK images.
+   * `ColourTransform.Greyscale` (also available as the aliased `Grayscale`) for greyscale images.
+   * `ColourTransform.CMYK` for CMYK images.
+
+ * `components` (`int`) – The `components` property can be used to determine the number
+ of colour components used for the JPEG file, reported as an integer value.
 
 ### Example of Use
 
 To create an instance of the `JPEG` class, import the `JPEG` class from the library and
 specify the absolute file path to the JPEG file you wish to open as the first argument.
 If the specified file can be opened successfully, the library will return an instance of
-either the `JPEG`, `JFIF` or `EXIF` subclasses, depending on the file format of the
-specified JPEG file; these classes are subclasses of the library's `JPEG` base class.
+either the `JPEG`, `JFIF`, `EXIF`, `CCIF` or `SPIFF` subclasses, depending on the file
+format of the specified JPEG file; these subclasses are all subclasses of the library's
+`JPEG` base class.
 
 <!--pytest.mark.skip-->
 
 ```python
-from jpegdata import JPEG, Format, Encoding
+from jpegdata import JPEG, Format, Encoding, ColourTransform
 
 filepath = "/path/to/file.jpeg"
 
 # Initialize the library with the absolute file path of the JPEG file to load
 jpeg = JPEG(filepath=filepath)
+
+assert isinstance(jpeg, JPEG)
 
 # Use the parsed properties of the file
 assert jpeg.format is Format.EXIF
@@ -95,6 +122,8 @@ assert jpeg.encoding is Encoding.BaselineDCT
 assert jpeg.precision == 8
 assert jpeg.width == 600
 assert jpeg.height == 400
+assert jpeg.components == 3
+assert jpeg.transform is ColourTransform.YCbCr
 
 # If desired, iterate through the segments held within the file:
 for segment in jpeg:
@@ -157,7 +186,7 @@ The above command will generate output similar to the following:
   "encoding": "BaselineDCT",
   "precision": 8,
   "width": 3,
-  "height": 3
+  "height": 3,
   "colour": {
     "components": 3,
     "transform": "YCbCr"
