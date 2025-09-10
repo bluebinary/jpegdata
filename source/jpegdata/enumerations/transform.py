@@ -1,7 +1,7 @@
 from enumerific import Enumeration, anno
 
 
-class ColourTransform(Enumeration):
+class ColourTransform(Enumeration, aliased=True):
     """The Colour Transform enumeration lists the known JPEG color transforms."""
 
     Unknown = anno(
@@ -28,6 +28,8 @@ class ColourTransform(Enumeration):
         3,
         description="Greyscale",
     )
+
+    Grayscale = Greyscale
 
     CMYK = anno(
         4,
